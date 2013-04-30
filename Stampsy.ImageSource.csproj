@@ -65,7 +65,7 @@
     <Compile Include="ImageSource.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\external\rx-monotouch\System.Reactive.csproj">
+    <ProjectReference Include="..\rx-monotouch\System.Reactive.csproj">
       <Project>{B201C111-F231-4D4A-9500-DF2CA8D5FD33}</Project>
       <Name>System.Reactive</Name>
     </ProjectReference>
