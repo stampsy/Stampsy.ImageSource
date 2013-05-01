@@ -7,7 +7,7 @@ It is in a very early stage right now.
 
 This library needs [rx-monotouch](https://github.com/stampsy/rx-monotouch) to be added to the solution to compile. And I haven't tested it on Mono 3 yet.
 
-### Rationale
+## Rationale
 
 I wrote an earlier version of this while implementing custom image picker that supports different sources, such as Camera Roll and Dropbox. Because a large part of our app uses UIWebView, most of the time instead of loading images in memory as UIImages, I wanted to save them to disk. But sometimes, I also wanted to load them in UIImages, and I wanted to support disk caching for all kinds of images, regardless of their sources.
 
@@ -19,7 +19,7 @@ This library is opinionated because it solves my problems:
 - It will support cancellation and progress reporting as optional features for some image providers.
 - It will be asynchronous by default.
 
-### Shut up and show me the code
+## Shut up and show me the code
 
 This is overly verbose now and uses C# 4 syntax, but anyway. It'll get better.  
 In this example, we first save a huge image from asset library without ever fully loading it in memory, then we scale it down—again, without loading it fully—and only load thumbnail in memory as a `UIImage` to display it.
