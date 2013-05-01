@@ -22,7 +22,7 @@ This library is opinionated because it solves my problems:
 ## Shut up and show me the code
 
 This is overly verbose now and uses C# 4 syntax, but anyway. It'll get better.  
-In this example, we first save a huge image from asset library without ever fully loading it in memory, then we scale it down—again, without loading it fully—and only load thumbnail in memory as a `UIImage` to display it.
+In this example, we first save a huge image from asset library **without ever fully loading it in memory**, then we scale it down—again, without loading it fully—and only load thumbnail in memory as a `UIImage` to display it.
 
     ImageSource.Fetch (
         new Uri ("assets-library://asset/asset.JPG?id=DDB80EF8-D2CE-40B1-AE0D-35356DD9FBF0&ext=JPG"),
