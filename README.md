@@ -1,8 +1,5 @@
-Stampsy.ImageSource
-===================
-
-A MonoTouch library to fetch images from Asset Library or Dropbox, scale them down and efficiently save them to disk.  
-This one is in early stages.
+**Stampsy.ImageSource** is a memory-efficient MonoTouch library that helps you fetch images from different sources, such as Asset Library or Dropbox, optionally scale them down and save them to disk.  
+It is in very early stage now.
 
 This library needs [rx-monotouch](https://github.com/stampsy/rx-monotouch) to be added to the solution to compile.  
 I haven't tested it on Mono 3 yet.
