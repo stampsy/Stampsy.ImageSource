@@ -1,12 +1,15 @@
-**Stampsy.ImageSource** is a memory-efficient MonoTouch library that helps you fetch images from different sources, such as Asset Library or Dropbox, optionally scale them down and save them to disk.  
-It is in very early stage now.
+Stampsy.ImageSource
+=======================
 
-This library needs [rx-monotouch](https://github.com/stampsy/rx-monotouch) to be added to the solution to compile.  
-I haven't tested it on Mono 3 yet.
+This is a memory-efficient MonoTouch library that helps you fetch images from different sources, such as Asset Library or Dropbox, optionally scale them down and save them to disk.  
+
+It is in a very early stage right now.
+
+This library needs [rx-monotouch](https://github.com/stampsy/rx-monotouch) to be added to the solution to compile. And I haven't tested it on Mono 3 yet.
 
 ### Rationale
 
-I wrote an earlier version of this while implementing custom image picker that supports different sources, such as Camera Roll and Dropbox. Because a large part of our app uses `UIWebView`, most of the time instead of loading images in memory as `UIImage`, I wanted to save them to disk. But sometimes, I also wanted to load them in `UIImage`, and I wanted to support disk caching for all kinds of images.
+I wrote an earlier version of this while implementing custom image picker that supports different sources, such as Camera Roll and Dropbox. Because a large part of our app uses UIWebView, most of the time instead of loading images in memory as UIImages, I wanted to save them to disk. But sometimes, I also wanted to load them in UIImages, and I wanted to support disk caching for all kinds of images, regardless of their sources.
 
 This library is opinionated because it solves my problems:
 
