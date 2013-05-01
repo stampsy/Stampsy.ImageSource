@@ -34,4 +34,4 @@ In this example, we first save a huge image from asset library without ever full
         ).ContinueWith (scaleTask => {
             View.Add (new UIImageView (scaleTask.Result.Image) { Frame = new Rectangle (0, 0, 50, 50) });
         }, uiScheduler);
-  });
+    });
