@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.IO;
+using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using MonoTouch.CoreGraphics;
@@ -12,6 +13,10 @@ namespace Stampsy.ImageSource
 {
     internal class ScaledSource : ISource
     {
+        public IScheduler FetchScheduler {
+            get { return TaskPoolScheduler.Default; }
+        }
+
         public IDescription Describe (Uri url)
         {
             return new ScaledDescription {
