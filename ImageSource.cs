@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 
@@ -30,6 +31,7 @@ namespace Stampsy.ImageSource
         private TRequest _request;
         private TaskCompletionSource<TRequest> _tcs;
         private object _gate;
+        private bool _disposed;
 
         public Task<TRequest> Task {
             get { return _tcs.Task; }
@@ -42,9 +44,12 @@ namespace Stampsy.ImageSource
             _gate = new object ();
 
             _subscription = source.Fetch (request)
+                .SubscribeOn (CurrentThreadScheduler.Instance)
                 .SurroundWith (Observable.Return (Unit.Default))
                 .FirstOrDefaultAsync (unit => request.IsFulfilled)
                 .SubscribeSafe (this);
+
+            UnsubscribeIfDisposed ();
         }
 
         public void OnNext (Unit value)
@@ -71,10 +76,18 @@ namespace Stampsy.ImageSource
 
         public void Dispose ()
         {
-            lock (_gate) {
-                if (_subscription != null) {
-                    _subscription.Dispose ();
-                    _subscription = null;
+            _disposed = true;
+            UnsubscribeIfDisposed ();
+        }
+
+        void UnsubscribeIfDisposed ()
+        {
+            if (_disposed) {
+                lock (_gate) {
+                    if (_subscription != null) {
+                        _subscription.Dispose ();
+                        _subscription = null;
+                    }
                 }
             }
         }

@@ -7,6 +7,7 @@ using MonoTouch.CoreGraphics;
 using MonoTouch.ImageIO;
 using MonoTouch.Foundation;
 using MonoTouch.UIKit;
+using System.Threading.Tasks;
 
 namespace Stampsy.ImageSource
 {
@@ -24,25 +25,32 @@ namespace Stampsy.ImageSource
             return Observable.Create<Unit> (o => {
                 var description = request.DescriptionAs<ScaledDescription> ();
                 var url = new NSUrl (description.AbsoluteSourceUrl.AbsoluteUri);
+                var disp = new CancellationDisposable ();
+                var token = disp.Token;
 
-                using (var source = CGImageSource.FromUrl (url)) {
-                    if (source.Handle == IntPtr.Zero)
-                        throw new Exception (string.Format ("Could not create source for '{0}'", url));
+                Task.Factory.StartNew (() => {
+                    using (var source = CGImageSource.FromUrl (url)) {
+                        if (source.Handle == IntPtr.Zero)
+                            throw new Exception (string.Format ("Could not create source for '{0}'", url));
 
-                    if (description.Mode != ScaledDescription.ScaleMode.ScaleAspectFit)
-                        throw new NotImplementedException ("TODO: learn to apply ScaleAspectFill and other scale modes");
+                        if (description.Mode != ScaledDescription.ScaleMode.ScaleAspectFit)
+                            throw new NotImplementedException ("TODO: learn to apply ScaleAspectFill and other scale modes");
 
-                    var sourceSize = ImageHelper.Measure (source);
-                    int maxPixelSize = GetMaxPixelSize (sourceSize, description.Size);
+                        var sourceSize = ImageHelper.Measure (source);
+                        int maxPixelSize = GetMaxPixelSize (sourceSize, description.Size);
 
-                    using (var scaled = CreateThumbnail (source, maxPixelSize)) {
-                        SaveToRequest (scaled, source.TypeIdentifier, request);
+                        if (token.IsCancellationRequested)
+                            return;
+
+                        using (var scaled = CreateThumbnail (source, maxPixelSize)) {
+                            SaveToRequest (scaled, source.TypeIdentifier, request);
+                        }
+
+                        o.OnCompleted ();
                     }
-                }
+                }, token);
 
-                o.OnCompleted ();
-
-                return Disposable.Empty;
+                return disp;
             });
         }
 
@@ -58,6 +66,8 @@ namespace Stampsy.ImageSource
 
         static void SaveToFile (CGImage image, string typeIdentifier, FileRequest request)
         {
+            CheckImageArgument (image, "image");
+
             using (var thumbnail = new UIImage (image))
             using (var data = SerializeImage (thumbnail, typeIdentifier)) {
                 NSError err;
@@ -71,6 +81,7 @@ namespace Stampsy.ImageSource
 
         static void SaveToMemory (CGImage image, MemoryRequest request)
         {
+            CheckImageArgument (image, "image");
             request.Image = new UIImage (image);
         }
 
@@ -102,10 +113,16 @@ namespace Stampsy.ImageSource
                 (float) target.Height / source.Value.Height
             );
 
-            return (int)Math.Max (
+            return (int) Math.Max (
                 scale * source.Value.Width,
                 scale * source.Value.Height
             );
+        }
+
+        static void CheckImageArgument (CGImage image, string argumentName)
+        {
+            if (image == null || image.Handle == IntPtr.Zero)
+                throw new ArgumentException (argumentName, "Image is invalid.");
         }
     }
 }

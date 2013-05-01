@@ -3,6 +3,7 @@ using System.IO;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using MonoTouch.AssetsLibrary;
 using MonoTouch.Foundation;
@@ -34,25 +35,32 @@ namespace Stampsy.ImageSource
                 : SaveFullResolutionImage (request);
         }
 
-        Task<ALAsset> GetAsset (AssetDescription description)
+        Task<ALAsset> GetAsset (AssetDescription description, CancellationToken token)
         {
             var tcs = new TaskCompletionSource<ALAsset> ();
 
-            _library.Value.AssetForUrl (new NSUrl (description.AssetUrl), (asset) => {
-                if (asset == null) {
-                    tcs.SetException (new Exception ("No asset found for url"));
+            Task.Factory.StartNew (() => {
+                if (token.IsCancellationRequested) {
+                    tcs.SetCanceled ();
                     return;
                 }
 
-                if (asset.DefaultRepresentation == null) {
-                    tcs.SetException (new Exception ("No representation found for the asset"));
-                    return;
-                }
+                _library.Value.AssetForUrl (new NSUrl (description.AssetUrl), (asset) => {
+                    if (asset == null) {
+                        tcs.SetException (new Exception ("No asset found for url"));
+                        return;
+                    }
 
-                tcs.SetResult (asset);
-            }, error => {
-                tcs.SetException (new Exception (error.ToString ()));
-            });
+                    if (asset.DefaultRepresentation == null) {
+                        tcs.SetException (new Exception ("No representation found for the asset"));
+                        return;
+                    }
+
+                    tcs.SetResult (asset);
+                }, error => {
+                    tcs.SetException (new Exception (error.ToString ()));
+                });
+            }, token);
 
             return tcs.Task;
         }
@@ -72,8 +80,10 @@ namespace Stampsy.ImageSource
         {
             return Observable.Create<Unit> (o => {
                 var description = request.DescriptionAs<AssetDescription> ();
+                var disp = new CancellationDisposable ();
+                var token = disp.Token;
 
-                GetAsset (description).ContinueWith (t => {
+                GetAsset (description, token).ContinueWith (t => {
                     var saveUrl = NSUrl.FromFilename (request.Filename);
                     
                     using (var asset = t.Result)
@@ -89,9 +99,9 @@ namespace Stampsy.ImageSource
                     }
                     
                     o.OnCompleted ();
-                });
+                }, token);
                 
-                return Disposable.Empty;
+                return disp;
             });
         }
 
@@ -99,15 +109,17 @@ namespace Stampsy.ImageSource
         {
             return Observable.Create<Unit> (o => {
                 var description = request.DescriptionAs<AssetDescription> ();
+                var disp = new CancellationDisposable ();
+                var token = disp.Token;
 
-                GetAsset (description).ContinueWith (t => {
+                GetAsset (description, token).ContinueWith (t => {
                     using (var asset = t.Result)
                         request.Image = new UIImage (asset.Thumbnail);
 
                     o.OnCompleted ();
-                });
+                }, token);
 
-                return Disposable.Empty;
+                return disp;
             });
         }
 
@@ -126,8 +138,10 @@ namespace Stampsy.ImageSource
         {
             return Observable.Create<Unit> (o => {
                 var description = request.DescriptionAs<AssetDescription> ();
+                var disp = new CancellationDisposable ();
+                var token = disp.Token;
 
-                GetAsset (description).ContinueWith (t => {
+                GetAsset (description, token).ContinueWith (t => {
                     using (File.Create (request.Filename))
                     using (var asset = t.Result)
                     using (var representation = asset.DefaultRepresentation) 
@@ -158,9 +172,9 @@ namespace Stampsy.ImageSource
                     }
 
                     o.OnCompleted ();
-                });
+                }, token);
 
-                return Disposable.Empty;
+                return disp;
             });
         }
 
@@ -168,16 +182,18 @@ namespace Stampsy.ImageSource
         {
             return Observable.Create<Unit> (o => {
                 var description = request.DescriptionAs<AssetDescription> ();
+                var disp = new CancellationDisposable ();
+                var token = disp.Token;
 
-                GetAsset (description).ContinueWith (t => {
+                GetAsset (description, token).ContinueWith (t => {
                     using (var asset = t.Result)
                     using (var representation = asset.DefaultRepresentation)
                         request.Image = new UIImage (representation.GetImage ());
 
                     o.OnCompleted ();
-                });
+                }, token);
 
-                return Disposable.Empty;
+                return disp;
             });
         }
     }
