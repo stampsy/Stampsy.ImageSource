@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Runtime.InteropServices;
@@ -18,10 +17,6 @@ namespace Stampsy.ImageSource
         static readonly Lazy<ALAssetsLibrary> _library = new Lazy<ALAssetsLibrary> (
             () => new ALAssetsLibrary ()
         );
-
-        public IScheduler FetchScheduler {
-            get { return DefaultScheduler.Instance; }
-        }
 
         public IDescription Describe (Uri url)
         {

@@ -42,7 +42,6 @@ namespace Stampsy.ImageSource
             _gate = new object ();
 
             _subscription = source.Fetch (request)
-                .SubscribeOn (source.FetchScheduler)
                 .SurroundWith (Observable.Return (Unit.Default))
                 .FirstOrDefaultAsync (unit => request.IsFulfilled)
                 .SubscribeSafe (this);
