@@ -35,3 +35,7 @@ In this example, we first save a huge image from asset library without ever full
             View.Add (new UIImageView (scaleTask.Result.Image) { Frame = new Rectangle (0, 0, 50, 50) });
         }, uiScheduler);
     });
+
+The most telling aspect probably is that `saveTask` is `Task<FileRequest>` and `scaleTask` is `Task<MemoryRequest>`.  
+
+Calling `Fetch` with `new FileDestination ("../Library/Caches")` will create a file called `8e4579bc19fcd2024172cff46feb738370d5edd2.jpg` in `Library/Caches`.
