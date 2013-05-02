@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
@@ -24,7 +25,7 @@ namespace Stampsy.ImageSource
         }
     }
 
-    internal class ImageSource<TRequest> : IObserver<Unit>, IDisposable
+    internal class ImageSource<TRequest> : IObserver<bool>, IDisposable
         where TRequest : Request
     {
         private IDisposable _subscription;
@@ -46,15 +47,15 @@ namespace Stampsy.ImageSource
             _subscription = source.Fetch (request)
                 .SubscribeOn (CurrentThreadScheduler.Instance)
                 .SurroundWith (Observable.Return (Unit.Default))
-                .FirstOrDefaultAsync (unit => request.IsFulfilled)
+                .Any (_ => request.IsFulfilled)
                 .SubscribeSafe (this);
 
             UnsubscribeIfDisposed ();
         }
 
-        public void OnNext (Unit value)
+        public void OnNext (bool any)
         {
-            if (value == null) {
+            if (!any) {
                 _tcs.TrySetException (new Exception (string.Format ("Request for {0} was never fulfilled", _request.Url)));
             } else {
                 _tcs.TrySetResult (_request);

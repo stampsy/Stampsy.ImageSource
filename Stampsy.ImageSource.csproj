@@ -55,7 +55,6 @@
     <Compile Include="Requests\MemoryRequest.cs" />
     <Compile Include="Sources\AssetSource.cs" />
     <Compile Include="Sources\ISource.cs" />
-    <Compile Include="Unit.cs" />
     <Compile Include="Descriptions\AssetDescription.cs" />
     <Compile Include="ImageHelper.cs" />
     <Compile Include="Extensions.cs" />

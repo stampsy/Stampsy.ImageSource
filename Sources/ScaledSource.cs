@@ -1,13 +1,14 @@
 using System;
 using System.Drawing;
 using System.IO;
+using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Threading.Tasks;
 using MonoTouch.CoreGraphics;
 using MonoTouch.ImageIO;
 using MonoTouch.Foundation;
 using MonoTouch.UIKit;
-using System.Threading.Tasks;
 
 namespace Stampsy.ImageSource
 {

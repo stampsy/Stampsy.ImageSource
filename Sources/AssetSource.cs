@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Runtime.InteropServices;
