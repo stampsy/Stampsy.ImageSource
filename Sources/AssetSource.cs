@@ -61,7 +61,7 @@ namespace Stampsy.ImageSource
                 }, error => {
                     tcs.SetException (new Exception (error.ToString ()));
                 });
-            }, token);
+            }, token).RouteExceptions (tcs);
 
             return tcs.Task;
         }
@@ -100,7 +100,7 @@ namespace Stampsy.ImageSource
                     }
                     
                     o.OnCompleted ();
-                }, token);
+                }, token).RouteExceptions (o);
                 
                 return disp;
             });
@@ -118,7 +118,7 @@ namespace Stampsy.ImageSource
                         request.Image = new UIImage (asset.Thumbnail);
 
                     o.OnCompleted ();
-                }, token);
+                }, token).RouteExceptions (o);
 
                 return disp;
             });
@@ -173,7 +173,7 @@ namespace Stampsy.ImageSource
                     }
 
                     o.OnCompleted ();
-                }, token);
+                }, token).RouteExceptions (o);
 
                 return disp;
             });
@@ -192,7 +192,7 @@ namespace Stampsy.ImageSource
                         request.Image = new UIImage (representation.GetImage ());
 
                     o.OnCompleted ();
-                }, token);
+                }, token).RouteExceptions (o);
 
                 return disp;
             });

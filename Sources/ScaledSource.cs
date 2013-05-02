@@ -49,7 +49,7 @@ namespace Stampsy.ImageSource
 
                         o.OnCompleted ();
                     }
-                }, token);
+                }, token).RouteExceptions (o);
 
                 return disp;
             });
