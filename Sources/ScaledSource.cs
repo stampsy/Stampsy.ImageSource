@@ -9,6 +9,8 @@ using MonoTouch.CoreGraphics;
 using MonoTouch.ImageIO;
 using MonoTouch.Foundation;
 using MonoTouch.UIKit;
+using System.Threading;
+using System.Runtime.InteropServices;
 
 namespace Stampsy.ImageSource
 {
@@ -34,18 +36,12 @@ namespace Stampsy.ImageSource
                         if (source.Handle == IntPtr.Zero)
                             throw new Exception (string.Format ("Could not create source for '{0}'", url));
 
-                        if (description.Mode != ScaledDescription.ScaleMode.ScaleAspectFit)
-                            throw new NotImplementedException ("TODO: learn to apply ScaleAspectFill and other scale modes");
-
                         var sourceSize = ImageHelper.Measure (source);
                         int maxPixelSize = GetMaxPixelSize (sourceSize, description.Size);
 
-                        if (token.IsCancellationRequested)
-                            return;
-
-                        using (var scaled = CreateThumbnail (source, maxPixelSize)) {
-                            SaveToRequest (scaled, source.TypeIdentifier, request);
-                        }
+                        using (var scaled = CreateThumbnail (source, maxPixelSize, token))
+                        using (var cropped = ScaleAndCrop (scaled, description.Size, description.Mode, token))
+                            SaveToRequest (cropped, source.TypeIdentifier, request);
 
                         o.OnCompleted ();
                     }
@@ -53,6 +49,59 @@ namespace Stampsy.ImageSource
 
                 return disp;
             });
+        }
+
+        static CGImage ScaleAndCrop (CGImage image, Size targetSize, ScaledDescription.ScaleMode mode, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested ();
+
+            bool crop = (mode == ScaledDescription.ScaleMode.ScaleAspectFill);
+            var toWidth = targetSize.Width;
+            var toHeight = targetSize.Height;
+            
+            if (image.Width == toWidth && image.Height == toHeight)
+                return image;
+            
+            if (image.Width < toWidth && image.Height < toHeight && !crop)
+                return image;
+            
+            var widthScale = (double) toWidth / image.Width;
+            var heightScale = (double) toHeight / image.Height;
+            
+            var scale = (crop)
+                ? Math.Max (widthScale, heightScale)
+                : Math.Min (widthScale, heightScale);
+
+            var sizeAfterScale = (scale == widthScale)
+                ? new Size (toWidth, (int) (image.Height * widthScale))
+                : new Size ((int) (image.Width * heightScale), toHeight);
+
+            if (!crop) {
+                targetSize = sizeAfterScale;
+            }
+            
+            var offsetSize = new Size (
+                (sizeAfterScale.Width - targetSize.Width) / 2,
+                (sizeAfterScale.Height - targetSize.Height) / 2
+            );
+            
+            if (scale < 1.0) {
+                var drawRect = new Rectangle (
+                    Point.Subtract (Point.Empty, offsetSize),
+                    sizeAfterScale
+                );
+                
+                return ImageHelper.Scale (image, drawRect, targetSize);
+            } else {
+                var scaledCropRect = new Rectangle(
+                    (int) (offsetSize.Width / scale),
+                    (int) (offsetSize.Height / scale),
+                    (int) (targetSize.Width / scale),
+                    (int) (targetSize.Height / scale)
+                );
+                
+                return image.WithImageInRect (scaledCropRect);
+            }
         }
 
         static void SaveToRequest (CGImage image, string typeIdentifier, Request request)
@@ -86,8 +135,10 @@ namespace Stampsy.ImageSource
             request.Image = new UIImage (image);
         }
 
-        static CGImage CreateThumbnail (CGImageSource source, int maxPixelSize)
+        static CGImage CreateThumbnail (CGImageSource source, int maxPixelSize, CancellationToken token)
         {
+            token.ThrowIfCancellationRequested ();
+
             return source.CreateThumbnail (0, new CGImageThumbnailOptions {
                 CreateThumbnailWithTransform = true,
                 CreateThumbnailFromImageAlways = true,
@@ -109,15 +160,12 @@ namespace Stampsy.ImageSource
             if (!source.HasValue)
                 return Math.Max (target.Width, target.Height);
 
-            float scale = Math.Max (
-                (float) target.Width / source.Value.Width,
-                (float) target.Height / source.Value.Height
-            );
+            var widthScale = (float) target.Width / (float) source.Value.Width;
+            var heightScale = (float) target.Height / (float) source.Value.Height;
 
-            return (int) Math.Max (
-                scale * source.Value.Width,
-                scale * source.Value.Height
-            );
+            return (widthScale > heightScale)
+                ? target.Width
+                : target.Height;
         }
 
         static void CheckImageArgument (CGImage image, string argumentName)

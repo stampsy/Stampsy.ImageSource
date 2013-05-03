@@ -1,8 +1,11 @@
 using System;
 using System.Drawing;
+using System.Runtime.InteropServices;
+using MonoTouch.CoreGraphics;
 using MonoTouch.ImageIO;
 using MonoTouch.Foundation;
 using MonoTouch.UIKit;
+using CGImageProperties = MonoTouch.ImageIO.CGImageProperties;
 
 namespace Stampsy.ImageSource
 {
@@ -132,6 +135,45 @@ namespace Stampsy.ImageSource
             case UIImageOrientation.RightMirrored:
                 return 7;
             }
+        }
+
+        public static CGImage Scale (CGImage image, Rectangle drawRect, Size size)
+        {
+            var bytesPerRow = (size.Width * 4);
+            var totalBytes = (bytesPerRow * size.Height);
+            
+            IntPtr bitmapData = IntPtr.Zero;
+            CGBitmapContext context = null;
+            CGImage outImage;
+            
+            try {
+                bitmapData = Marshal.AllocHGlobal (totalBytes);
+                if (bitmapData == IntPtr.Zero) {
+                    return null;
+                }
+                
+                using (var colorSpace = CGColorSpace.CreateDeviceRGB ()) {
+                    context = new CGBitmapContext (
+                        bitmapData, size.Width, size.Height, 8, bytesPerRow,
+                        colorSpace, CGImageAlphaInfo.NoneSkipFirst
+                        );
+                }
+                
+                if (context == null)
+                    return null;
+                
+                context.DrawImage (drawRect, image);
+                outImage = context.ToImage ();
+            } catch {
+                return null;
+            } finally {
+                if (context != null)
+                    context.Dispose ();
+                
+                Marshal.FreeHGlobal (bitmapData);
+            }
+            
+            return outImage;
         }
     }
 }
