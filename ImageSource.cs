@@ -11,7 +11,7 @@ namespace Stampsy.ImageSource
     {
         static readonly Dictionary<string, ISource> _sources = new Dictionary<string, ISource> {
             { "assets-library", new AssetSource () },
-            { "scaled", new ScaledSource () },
+            { "scaled", new ScaledSource { JpegCompressionQuality = .95f }},
         };
 
         public static Task<TRequest> Fetch<TRequest> (Uri url, IDestination<TRequest> destination)

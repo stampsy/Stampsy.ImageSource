@@ -16,6 +16,13 @@ namespace Stampsy.ImageSource
 {
     internal class ScaledSource : ISource
     {
+        public float JpegCompressionQuality { get; set; }
+
+        public ScaledSource ()
+        {
+            JpegCompressionQuality = 1;
+        }
+
         public IDescription Describe (Uri url)
         {
             return new ScaledDescription {
@@ -51,60 +58,15 @@ namespace Stampsy.ImageSource
             });
         }
 
-        static CGImage ScaleAndCrop (CGImage image, Size targetSize, ScaledDescription.ScaleMode mode, CancellationToken token)
+        NSData SerializeImage (UIImage image, string typeIdentifier)
         {
-            token.ThrowIfCancellationRequested ();
+            if (typeIdentifier == "public.png")
+                return image.AsPNG ();
 
-            bool crop = (mode == ScaledDescription.ScaleMode.ScaleAspectFill);
-            var toWidth = targetSize.Width;
-            var toHeight = targetSize.Height;
-            
-            if (image.Width == toWidth && image.Height == toHeight)
-                return image;
-            
-            if (image.Width < toWidth && image.Height < toHeight && !crop)
-                return image;
-            
-            var widthScale = (double) toWidth / image.Width;
-            var heightScale = (double) toHeight / image.Height;
-            
-            var scale = (crop)
-                ? Math.Max (widthScale, heightScale)
-                : Math.Min (widthScale, heightScale);
-
-            var sizeAfterScale = (scale == widthScale)
-                ? new Size (toWidth, (int) (image.Height * widthScale))
-                : new Size ((int) (image.Width * heightScale), toHeight);
-
-            if (!crop) {
-                targetSize = sizeAfterScale;
-            }
-            
-            var offsetSize = new Size (
-                (sizeAfterScale.Width - targetSize.Width) / 2,
-                (sizeAfterScale.Height - targetSize.Height) / 2
-            );
-            
-            if (scale < 1.0) {
-                var drawRect = new Rectangle (
-                    Point.Subtract (Point.Empty, offsetSize),
-                    sizeAfterScale
-                );
-                
-                return ImageHelper.Scale (image, drawRect, targetSize);
-            } else {
-                var scaledCropRect = new Rectangle(
-                    (int) (offsetSize.Width / scale),
-                    (int) (offsetSize.Height / scale),
-                    (int) (targetSize.Width / scale),
-                    (int) (targetSize.Height / scale)
-                );
-                
-                return image.WithImageInRect (scaledCropRect);
-            }
+            return image.AsJPEG (JpegCompressionQuality);
         }
 
-        static void SaveToRequest (CGImage image, string typeIdentifier, Request request)
+        void SaveToRequest (CGImage image, string typeIdentifier, Request request)
         {
             if (request is FileRequest)
                 SaveToFile (image, typeIdentifier, (FileRequest) request);
@@ -114,7 +76,7 @@ namespace Stampsy.ImageSource
                 throw new NotImplementedException ();
         }
 
-        static void SaveToFile (CGImage image, string typeIdentifier, FileRequest request)
+        void SaveToFile (CGImage image, string typeIdentifier, FileRequest request)
         {
             CheckImageArgument (image, "image");
 
@@ -129,10 +91,23 @@ namespace Stampsy.ImageSource
             }
         }
 
-        static void SaveToMemory (CGImage image, MemoryRequest request)
+        void SaveToMemory (CGImage image, MemoryRequest request)
         {
             CheckImageArgument (image, "image");
             request.Image = new UIImage (image);
+        }
+
+        static int GetMaxPixelSize (Size? source, Size target)
+        {
+            if (!source.HasValue)
+                return Math.Max (target.Width, target.Height);
+
+            var widthScale = (float) target.Width / source.Value.Width;
+            var heightScale = (float) target.Height / source.Value.Height;
+
+            return (widthScale > heightScale)
+                ? target.Width
+                : target.Height;
         }
 
         static CGImage CreateThumbnail (CGImageSource source, int maxPixelSize, CancellationToken token)
@@ -147,25 +122,57 @@ namespace Stampsy.ImageSource
             });
         }
 
-        static NSData SerializeImage (UIImage image, string typeIdentifier)
+        static CGImage ScaleAndCrop (CGImage image, Size targetSize, ScaledDescription.ScaleMode mode, CancellationToken token)
         {
-            if (typeIdentifier == "public.png")
-                return image.AsPNG ();
+            token.ThrowIfCancellationRequested ();
 
-            return image.AsJPEG (.95f);
-        }
+            bool crop = (mode == ScaledDescription.ScaleMode.ScaleAspectFill);
+            var toWidth = targetSize.Width;
+            var toHeight = targetSize.Height;
 
-        static int GetMaxPixelSize (Size? source, Size target)
-        {
-            if (!source.HasValue)
-                return Math.Max (target.Width, target.Height);
+            if (image.Width == toWidth && image.Height == toHeight)
+                return image;
 
-            var widthScale = (float) target.Width / (float) source.Value.Width;
-            var heightScale = (float) target.Height / (float) source.Value.Height;
+            if (image.Width < toWidth && image.Height < toHeight && !crop)
+                return image;
 
-            return (widthScale > heightScale)
-                ? target.Width
-                : target.Height;
+            var widthScale = (double) toWidth / image.Width;
+            var heightScale = (double) toHeight / image.Height;
+
+            var scale = (crop)
+                ? Math.Max (widthScale, heightScale)
+                    : Math.Min (widthScale, heightScale);
+
+            var sizeAfterScale = (scale == widthScale)
+                ? new Size (toWidth, (int) (image.Height * widthScale))
+                    : new Size ((int) (image.Width * heightScale), toHeight);
+
+            if (!crop) {
+                targetSize = sizeAfterScale;
+            }
+
+            var offsetSize = new Size (
+                (sizeAfterScale.Width - targetSize.Width) / 2,
+                (sizeAfterScale.Height - targetSize.Height) / 2
+            );
+
+            if (scale < 1.0) {
+                var drawRect = new Rectangle (
+                    Point.Subtract (Point.Empty, offsetSize),
+                    sizeAfterScale
+                );
+
+                return ImageHelper.Scale (image, drawRect, targetSize);
+            } else {
+                var scaledCropRect = new Rectangle (
+                    (int) (offsetSize.Width / scale),
+                    (int) (offsetSize.Height / scale),
+                    (int) (targetSize.Width / scale),
+                    (int) (targetSize.Height / scale)
+                );
+
+                return image.WithImageInRect (scaledCropRect);
+            }
         }
 
         static void CheckImageArgument (CGImage image, string argumentName)
