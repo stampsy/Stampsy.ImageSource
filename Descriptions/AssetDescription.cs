@@ -5,13 +5,13 @@ namespace Stampsy.ImageSource
 {
     public class AssetDescription : IDescription
     {
-        public enum AssetSize
+        public enum AssetImageKind
         {
             Thumbnail,
             FullResolution
         }
 
-        public AssetSize Size { get; private set; }
+        public AssetImageKind Kind { get; private set; }
         public string AssetUrl { get; private set; }
         public string Extension { get; private set; }
 
@@ -22,25 +22,25 @@ namespace Stampsy.ImageSource
             set {
                 _url = value;
 
-                Size = ParseResourceKind (value);
-                AssetUrl = GenerateAssetUrl (value, Size);
+                Kind = ParseImageKind (value);
+                AssetUrl = GenerateAssetUrl (value, Kind);
                 Extension = ParseExtension (value);
             }
         }
 
-        static string GenerateAssetUrl (Uri url, AssetSize size)
+        static string GenerateAssetUrl (Uri url, AssetImageKind size)
         {
-            if (size == AssetSize.Thumbnail)
+            if (size == AssetImageKind.Thumbnail)
                 return url.AbsoluteUri.Replace ("thumbnail", "asset");
             
             return url.AbsoluteUri;
         }
         
-        static AssetSize ParseResourceKind (Uri url)
+        static AssetImageKind ParseImageKind (Uri url)
         {
-            return url.AbsolutePath.Contains ("thumbnail")
-                ? AssetSize.Thumbnail
-                : AssetSize.FullResolution;
+            return url.Host == "thumbnail"
+                ? AssetImageKind.Thumbnail
+                : AssetImageKind.FullResolution;
         }
 
         static string ParseExtension (Uri url)

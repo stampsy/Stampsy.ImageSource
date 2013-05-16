@@ -62,11 +62,17 @@
     <Compile Include="Sources\ScaledSource.cs" />
     <Compile Include="Descriptions\IDescription.cs" />
     <Compile Include="ImageSource.cs" />
+    <Compile Include="Descriptions\DropboxDescription.cs" />
+    <Compile Include="Sources\DropboxSource.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\rx-monotouch\System.Reactive.csproj">
       <Project>{B201C111-F231-4D4A-9500-DF2CA8D5FD33}</Project>
       <Name>System.Reactive</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\dropbox-monotouch\DropboxSDK\DropboxSDK.csproj">
+      <Project>{105EF051-3FE5-4B18-B080-52740D2BD1CD}</Project>
+      <Name>DropboxSDK</Name>
     </ProjectReference>
   </ItemGroup>
   <ProjectExtensions>

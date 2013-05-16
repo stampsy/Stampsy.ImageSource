@@ -31,7 +31,7 @@ namespace Stampsy.ImageSource
         {
             var description = request.DescriptionAs<AssetDescription> ();
 
-            return (description.Size == AssetDescription.AssetSize.Thumbnail)
+            return (description.Kind == AssetDescription.AssetImageKind.Thumbnail)
                 ? SaveThumbnail (request)
                 : SaveFullResolutionImage (request);
         }
