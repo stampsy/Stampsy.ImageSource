@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
@@ -12,16 +13,28 @@ namespace Stampsy.ImageSource
         static readonly Dictionary<string, ISource> _sources = new Dictionary<string, ISource> {
             { "assets-library", new AssetSource () },
             { "scaled", new ScaledSource { JpegCompressionQuality = .95f }},
+            { "dropbox", new DropboxSource () }
         };
+
+        static readonly ConcurrentDictionary<Uri, IDisposable> _operations = new ConcurrentDictionary<Uri, IDisposable> ();
 
         public static Task<TRequest> Fetch<TRequest> (Uri url, IDestination<TRequest> destination)
             where TRequest : Request
         {
-            var source = _sources [url.Scheme];
-            var description = source.Describe (url);
-            var request = destination.CreateRequest (description);
+            var operation = _operations.GetOrAdd (url, _ => {
+                var source = _sources [url.Scheme];
+                var description = source.Describe (url);
+                var request = destination.CreateRequest (description);
 
-            return new ImageSource<TRequest> (source, request).Task;
+                return new ImageSource<TRequest> (source, request);
+            }) as ImageSource<TRequest>;
+
+            operation.Task.ContinueWith (_ => {
+                IDisposable i;
+                _operations.TryRemove (url, out i);
+            });
+
+            return operation.Task;
         }
     }
 
