@@ -30,23 +30,23 @@ namespace Stampsy.ImageSource
 
                 var subscription = StartDropboxTask (client, fileRequest, cancel.Token)
                     .ToObservable ()
-                    .Select (_ => Unit.Default)
                     .Subscribe (o);
 
                 return new CompositeDisposable (client, cancel, subscription);
             });
         }
 
-        static Task<DBMetadata> StartDropboxTask (DBRestClient client, FileRequest request, CancellationToken token)
+        static Task StartDropboxTask (DBRestClient client, FileRequest request, CancellationToken token)
         {
             var description = request.DescriptionAs<DropboxDescription> ();
             var path = description.Path;
+            var filename = System.IO.Path.GetFullPath (request.Filename);
 
             switch (description.Kind) {
             case DropboxDescription.DropboxImageKind.LargeThumbnail:
-                return client.LoadThumbnailTask (path, "large", request.Filename, token);
+                return client.LoadThumbnailTask (path, "large", filename, token);
             case DropboxDescription.DropboxImageKind.FullResolution:
-                return client.LoadFileTask (path, request.Filename, token);
+                return client.LoadFileTask (path, filename, token);
             default:
                 throw new NotImplementedException ();
             }
