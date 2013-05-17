@@ -30,10 +30,9 @@ namespace Stampsy.ImageSource
 
         static string GenerateAssetUrl (Uri url, AssetImageKind size)
         {
-            if (size == AssetImageKind.Thumbnail)
-                return url.AbsoluteUri.Replace ("thumbnail", "asset");
-            
-            return url.AbsoluteUri;
+            var builder = new UriBuilder (url);
+            builder.Host = "asset";
+            return builder.ToString ();
         }
         
         static AssetImageKind ParseImageKind (Uri url)
