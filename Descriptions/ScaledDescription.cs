@@ -15,7 +15,6 @@ namespace Stampsy.ImageSource
         }
 
         public Uri SourceUrl { get; private set; }
-        public Uri AbsoluteSourceUrl { get; private set; }
         public Size Size { get; private set; }
         public ScaleMode Mode { get; private set; }
         public string Extension { get; private set; }
@@ -30,7 +29,6 @@ namespace Stampsy.ImageSource
                 var query = HttpUtility.ParseQueryString (value.Query);
 
                 SourceUrl = ParseSourceUrl (query);
-                AbsoluteSourceUrl = GetAbsoluteSourceUrl (SourceUrl);
                 Size = ParseRequestedSize (query);
                 Mode = ParseScaleMode (query);
                 Extension = Path.GetExtension (SourceUrl.OriginalString);
@@ -49,7 +47,7 @@ namespace Stampsy.ImageSource
         {
             return new Uri (
                 HttpUtility.UrlDecode (query ["src"]),
-                UriKind.RelativeOrAbsolute
+                UriKind.Absolute
             );
         }
         
@@ -60,16 +58,6 @@ namespace Stampsy.ImageSource
                 ? ScaleMode.ScaleAspectFill
                 : ScaleMode.ScaleAspectFit;
         }
-
-        static Uri GetAbsoluteSourceUrl (Uri sourceUrl)
-        {
-            if (sourceUrl.IsAbsoluteUri)
-                return sourceUrl;
-            
-            var baseUrl = new Uri (Directory.GetCurrentDirectory () + "/");
-            return new Uri (baseUrl, sourceUrl);
-        }
-
     }
 }
 

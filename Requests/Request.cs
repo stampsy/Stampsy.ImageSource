@@ -5,21 +5,15 @@ namespace Stampsy.ImageSource
     public abstract class Request
     {
         public abstract bool IsFulfilled { get; }
-
-        private IDescription _description;
+        public IDescription Description { get; private set; }
 
         public Uri Url { 
-            get { return _description.Url; }
-        }
-
-        internal TDescription DescriptionAs<TDescription> () where TDescription : IDescription
-        {
-            return (TDescription) _description;
+            get { return Description.Url; }
         }
 
         public Request (IDescription description)
         {
-            _description = description;
+            Description = description;
         }
     }
 }

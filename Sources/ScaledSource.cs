@@ -1,9 +1,6 @@
 using System;
 using System.Drawing;
 using System.IO;
-using System.Reactive;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
 using System.Threading.Tasks;
 using MonoTouch.CoreGraphics;
 using MonoTouch.ImageIO;
@@ -30,32 +27,26 @@ namespace Stampsy.ImageSource
             };
         }
 
-        public IObservable<Unit> Fetch (Request request)
+        public Task Fetch (Request request, CancellationToken token)
         {
-            return Observable.Create<Unit> (o => {
-                var description = request.DescriptionAs<ScaledDescription> ();
-                var url = new NSUrl (description.AbsoluteSourceUrl.AbsoluteUri);
-                var disp = new CancellationDisposable ();
-                var token = disp.Token;
+            var description = (ScaledDescription) request.Description;
+            var url = new NSUrl (description.SourceUrl.AbsoluteUri);
 
-                Task.Factory.StartNew (() => {
-                    using (var source = CGImageSource.FromUrl (url)) {
-                        if (source.Handle == IntPtr.Zero)
-                            throw new Exception (string.Format ("Could not create source for '{0}'", url));
+            return Task.Factory.StartNew (() => {
+                using (var source = CGImageSource.FromUrl (url)) {
+                    if (source.Handle == IntPtr.Zero)
+                        throw new Exception (string.Format ("Could not create source for '{0}'", url));
 
-                        var sourceSize = ImageHelper.Measure (source);
-                        int maxPixelSize = GetMaxPixelSize (sourceSize, description.Size);
+                    token.ThrowIfCancellationRequested ();
 
-                        using (var scaled = CreateThumbnail (source, maxPixelSize, token))
-                        using (var cropped = ScaleAndCrop (scaled, description.Size, description.Mode, token))
-                            SaveToRequest (cropped, source.TypeIdentifier, request);
+                    var sourceSize = ImageHelper.Measure (source);
+                    int maxPixelSize = GetMaxPixelSize (sourceSize, description.Size);
 
-                        o.OnCompleted ();
-                    }
-                }, token).RouteExceptions (o);
-
-                return disp;
-            });
+                    using (var scaled = CreateThumbnail (source, maxPixelSize, token))
+                    using (var cropped = ScaleAndCrop (scaled, description.Size, description.Mode, token))
+                        SaveToRequest (cropped, source.TypeIdentifier, request);
+                }
+            }, token);
         }
 
         NSData SerializeImage (UIImage image, string typeIdentifier)
@@ -78,7 +69,7 @@ namespace Stampsy.ImageSource
 
         void SaveToFile (CGImage image, string typeIdentifier, FileRequest request)
         {
-            CheckImageArgument (image, "image");
+            EnsureValidImage (image, "image");
 
             using (var thumbnail = new UIImage (image))
             using (var data = SerializeImage (thumbnail, typeIdentifier)) {
@@ -93,7 +84,7 @@ namespace Stampsy.ImageSource
 
         void SaveToMemory (CGImage image, MemoryRequest request)
         {
-            CheckImageArgument (image, "image");
+            EnsureValidImage (image, "image");
             request.Image = new UIImage (image);
         }
 
@@ -141,11 +132,11 @@ namespace Stampsy.ImageSource
 
             var scale = (crop)
                 ? Math.Max (widthScale, heightScale)
-                    : Math.Min (widthScale, heightScale);
+                : Math.Min (widthScale, heightScale);
 
             var sizeAfterScale = (scale == widthScale)
                 ? new Size (toWidth, (int) (image.Height * widthScale))
-                    : new Size ((int) (image.Width * heightScale), toHeight);
+                : new Size ((int) (image.Width * heightScale), toHeight);
 
             if (!crop) {
                 targetSize = sizeAfterScale;
@@ -175,11 +166,10 @@ namespace Stampsy.ImageSource
             }
         }
 
-        static void CheckImageArgument (CGImage image, string argumentName)
+        static void EnsureValidImage (CGImage image, string argumentName)
         {
             if (image == null || image.Handle == IntPtr.Zero)
                 throw new ArgumentException (argumentName, "Image is invalid.");
         }
     }
 }
-
