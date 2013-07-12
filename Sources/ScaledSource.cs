@@ -30,7 +30,7 @@ namespace Stampsy.ImageSource
         public Task Fetch (Request request, CancellationToken token)
         {
             var description = (ScaledDescription) request.Description;
-            var url = new NSUrl (description.SourceUrl.AbsoluteUri);
+            var url = new NSUrl (description.AbsoluteSourceUrl.AbsoluteUri);
 
             return Task.Factory.StartNew (() => {
                 using (var source = CGImageSource.FromUrl (url)) {
@@ -96,7 +96,7 @@ namespace Stampsy.ImageSource
             var widthScale = (float) target.Width / source.Value.Width;
             var heightScale = (float) target.Height / source.Value.Height;
 
-            return (widthScale > heightScale)
+            return (widthScale < heightScale)
                 ? target.Width
                 : target.Height;
         }
