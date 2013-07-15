@@ -11,49 +11,61 @@ using CGImageProperties = MonoTouch.ImageIO.CGImageProperties;
 
 namespace Stampsy.ImageSource
 {
-    internal class AssetSource : ISource
+    internal class AssetSource : Source
     {
         static readonly Lazy<ALAssetsLibrary> _library = new Lazy<ALAssetsLibrary> (
             () => new ALAssetsLibrary ()
         );
 
-        public IDescription Describe (Uri url)
+        public override IDescription Describe (Uri url)
         {
             return new AssetDescription {
                 Url = url
             };
         }
 
-        public Task Fetch (Request request, CancellationToken token)
+        protected override Task FetchToFile (FileRequest request, CancellationToken token)
         {
             var description = (AssetDescription) request.Description;
 
             return GetAsset (description, token).ContinueWith ((t) => {
-                using (var asset = t.Result) {
-                    SaveAsset (asset, request, token);
-                }
+                SaveAssetToFile (t.Result, request, token);
             }, token, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
         }
 
-        void SaveAsset (ALAsset asset, Request request, CancellationToken token)
+        protected override Task FetchToMemory (MemoryRequest request, CancellationToken token)
         {
             var description = (AssetDescription) request.Description;
-            bool thumbnail = (description.Kind == AssetDescription.AssetImageKind.Thumbnail);
 
-            if (thumbnail)
-                SaveThumbnail (asset, request, token);
-            else
-                SaveFullResolutionImage (asset, request, token);
+            return GetAsset (description, token).ContinueWith ((t) => {
+                SaveAssetToMemory (t.Result, request, token);
+            }, token, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
         }
 
-        void SaveThumbnail (ALAsset asset, Request request, CancellationToken token)
+        bool IsThumbnail (Request request)
         {
-            if (request is FileRequest)
-                SaveThumbnailToFile (asset, (FileRequest) request, token);
-            else if (request is MemoryRequest)
-                SaveThumbnailToMemory (asset, (MemoryRequest) request, token);
-            else
-                throw new NotImplementedException ();
+            var description = (AssetDescription) request.Description;
+            return (description.Kind == AssetDescription.AssetImageKind.Thumbnail);
+        }
+
+        void SaveAssetToFile (ALAsset asset, FileRequest request, CancellationToken token)
+        {
+            using (asset) {
+                if (IsThumbnail (request))
+                    SaveThumbnailToFile (asset, request, token);
+                else
+                    SaveFullResolutionImageToFile (asset, request, token);
+            }
+        }
+
+        void SaveAssetToMemory (ALAsset asset, MemoryRequest request, CancellationToken token)
+        {
+            using (asset) {
+                if (IsThumbnail (request))
+                    SaveThumbnailToMemory (asset, request, token);
+                else
+                    SaveFullResolutionImageToMemory (asset, request, token);
+            }
         }
 
         void SaveThumbnailToFile (ALAsset asset, FileRequest request, CancellationToken token)
@@ -74,16 +86,6 @@ namespace Stampsy.ImageSource
         void SaveThumbnailToMemory (ALAsset asset, MemoryRequest request, CancellationToken token)
         {
             request.Image = new UIImage (asset.Thumbnail);
-        }
-
-        void SaveFullResolutionImage (ALAsset asset, Request request, CancellationToken token)
-        {
-            if (request is FileRequest)
-                SaveFullResolutionImageToFile (asset, (FileRequest) request, token);
-            else if (request is MemoryRequest)
-                SaveFullResolutionImageToMemory (asset, (MemoryRequest) request, token);            
-            else
-                throw new NotImplementedException ();
         }
 
         void SaveFullResolutionImageToFile (ALAsset asset, FileRequest request, CancellationToken token)

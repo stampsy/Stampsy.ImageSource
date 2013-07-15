@@ -47,7 +47,6 @@
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
-    <Compile Include="Destinations\IDestination.cs" />
     <Compile Include="Destinations\FileDestination.cs" />
     <Compile Include="Destinations\MemoryDestination.cs" />
     <Compile Include="Requests\FileRequest.cs" />
@@ -57,11 +56,12 @@
     <Compile Include="Sources\ISource.cs" />
     <Compile Include="Descriptions\AssetDescription.cs" />
     <Compile Include="ImageHelper.cs" />
-    <Compile Include="Extensions.cs" />
     <Compile Include="Descriptions\ScaledDescription.cs" />
     <Compile Include="Sources\ScaledSource.cs" />
     <Compile Include="Descriptions\IDescription.cs" />
     <Compile Include="ImageManager.cs" />
+    <Compile Include="Destinations\Destination.cs" />
+    <Compile Include="Sources\Source.cs" />
   </ItemGroup>
   <ProjectExtensions>
     <MonoDevelop>

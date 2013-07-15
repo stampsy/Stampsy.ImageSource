@@ -5,7 +5,7 @@ using System.Threading;
 
 namespace Stampsy.ImageSource
 {
-    internal interface ISource
+    public interface ISource
     {
         IDescription Describe (Uri url);
         Task Fetch (Request request, CancellationToken token);

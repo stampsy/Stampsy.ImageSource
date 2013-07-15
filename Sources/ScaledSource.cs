@@ -11,7 +11,7 @@ using System.Runtime.InteropServices;
 
 namespace Stampsy.ImageSource
 {
-    internal class ScaledSource : ISource
+    internal class ScaledSource : Source
     {
         public float JpegCompressionQuality { get; set; }
 
@@ -20,72 +20,55 @@ namespace Stampsy.ImageSource
             JpegCompressionQuality = 1;
         }
 
-        public IDescription Describe (Uri url)
+        public override IDescription Describe (Uri url)
         {
             return new ScaledDescription {
                 Url = url
             };
         }
 
-        public Task Fetch (Request request, CancellationToken token)
+        CGImageSource CreateImageSource (ScaledDescription description)
+        {
+            var url = new NSUrl (description.AbsoluteSourceUrl.AbsoluteUri);
+            var source = CGImageSource.FromUrl (url);
+
+            if (source.Handle == IntPtr.Zero)
+                throw new Exception (string.Format ("Could not create source for '{0}'", url));
+
+            return source;
+        }
+
+        protected override Task FetchToMemory (MemoryRequest request, CancellationToken token)
         {
             var description = (ScaledDescription) request.Description;
-            var url = new NSUrl (description.AbsoluteSourceUrl.AbsoluteUri);
 
             return Task.Factory.StartNew (() => {
-                using (var source = CGImageSource.FromUrl (url)) {
-                    if (source.Handle == IntPtr.Zero)
-                        throw new Exception (string.Format ("Could not create source for '{0}'", url));
-
+                using (var source = CreateImageSource (description)) {
                     token.ThrowIfCancellationRequested ();
 
                     var sourceSize = ImageHelper.Measure (source);
                     int maxPixelSize = GetMaxPixelSize (sourceSize, description.Size);
 
                     using (var scaled = CreateThumbnail (source, maxPixelSize, token))
-                    using (var cropped = ScaleAndCrop (scaled, description.Size, description.Mode, token))
-                        SaveToRequest (cropped, source.TypeIdentifier, request);
+                    using (var cropped = ScaleAndCrop (scaled, description.Size, description.Mode, token)) {
+                        if (cropped == null || cropped.Handle == IntPtr.Zero)
+                            throw new Exception ("Bad image.");
+
+                        request.Image = new UIImage (cropped);
+                    }
                 }
             }, token);
         }
 
-        NSData SerializeImage (UIImage image, string typeIdentifier)
+        protected override string GetImageExtension (MemoryRequest request)
         {
-            if (typeIdentifier == "public.png")
-                return image.AsPNG ();
-
-            return image.AsJPEG (JpegCompressionQuality);
-        }
-
-        void SaveToRequest (CGImage image, string typeIdentifier, Request request)
-        {
-            if (request is FileRequest)
-                SaveToFile (image, typeIdentifier, (FileRequest) request);
-            else if (request is MemoryRequest)
-                SaveToMemory (image, (MemoryRequest) request);
-            else
-                throw new NotImplementedException ();
-        }
-
-        void SaveToFile (CGImage image, string typeIdentifier, FileRequest request)
-        {
-            EnsureValidImage (image, "image");
-
-            using (var thumbnail = new UIImage (image))
-            using (var data = SerializeImage (thumbnail, typeIdentifier)) {
-                NSError err;
-
-                data.Save (NSUrl.FromFilename (request.Filename), false, out err);
-
-                if (err != null)
-                    throw new Exception (err.ToString ());
+            using (var source = CreateImageSource ((ScaledDescription) request.Description)) {
+                try {
+                    return Path.GetExtension (source.TypeIdentifier) ?? "png";
+                } catch {
+                    return "png";
+                }
             }
-        }
-
-        void SaveToMemory (CGImage image, MemoryRequest request)
-        {
-            EnsureValidImage (image, "image");
-            request.Image = new UIImage (image);
         }
 
         static int GetMaxPixelSize (Size? source, Size target)
@@ -164,12 +147,6 @@ namespace Stampsy.ImageSource
 
                 return image.WithImageInRect (scaledCropRect);
             }
-        }
-
-        static void EnsureValidImage (CGImage image, string argumentName)
-        {
-            if (image == null || image.Handle == IntPtr.Zero)
-                throw new ArgumentException (argumentName, "Image is invalid.");
         }
     }
 }

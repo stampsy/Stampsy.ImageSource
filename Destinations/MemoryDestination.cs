@@ -2,7 +2,7 @@ using System;
 
 namespace Stampsy.ImageSource
 {
-    public class MemoryDestination : IDestination<MemoryRequest>
+    public class MemoryDestination : Destination<MemoryRequest>
     {
         public readonly static MemoryDestination Default = new MemoryDestination ();
 
@@ -10,7 +10,7 @@ namespace Stampsy.ImageSource
         {
         }
 
-        public MemoryRequest CreateRequest (IDescription description)
+        protected override MemoryRequest CreateRequest (IDescription description)
         {
             return new MemoryRequest (description);
         }

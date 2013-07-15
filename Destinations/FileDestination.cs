@@ -3,10 +3,11 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using MonoTouch.Foundation;
 
 namespace Stampsy.ImageSource
 {
-    public class FileDestination : IDestination<FileRequest>
+    public class FileDestination : Destination<FileRequest>
     {
         public static FileDestination InLibrary (params string [] folders)
         {
@@ -20,6 +21,11 @@ namespace Stampsy.ImageSource
             return InLibrary (new [] { "Caches" }.Concat (folders).ToArray ());
         }
 
+        public static FileDestination InTemp ()
+        {
+            return new FileDestination ("../tmp");
+        }
+
 
         public string Folder { get; private set; }
 
@@ -28,7 +34,7 @@ namespace Stampsy.ImageSource
             Folder = folder;
         }
 
-        public FileRequest CreateRequest (IDescription description)
+        protected override FileRequest CreateRequest (IDescription description)
         {
             var url = description.Url;
             var filename = ComputeHash (url) + description.Extension;
