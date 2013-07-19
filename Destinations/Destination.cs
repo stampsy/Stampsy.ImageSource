@@ -12,12 +12,21 @@ namespace Stampsy.ImageSource
 
         protected abstract TRequest CreateRequest (IDescription description);
 
+        public TRequest CreateRequest (Uri url)
+        {
+            var source = ImageManager.GetSource (url);
+            var description = source.Describe (url);
+            return CreateRequest (description);
+        }
+
         public Task<TRequest> Fetch (Uri url, CancellationToken token = default (CancellationToken))
         {
             return _tasks.GetOrAdd (url, _ => {
                 var source = ImageManager.GetSource (url);
-                var description = source.Describe (url);
-                var request = CreateRequest (description);
+                var request = CreateRequest (url);
+
+                if (request.IsFulfilled)
+                    return Task.Factory.FromResult (request);
 
                 return source.Fetch (request, token).ContinueWith (t => {
                     Task<TRequest> ignored;

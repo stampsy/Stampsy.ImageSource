@@ -85,7 +85,8 @@ namespace Stampsy.ImageSource
 
         void SaveThumbnailToMemory (ALAsset asset, MemoryRequest request, CancellationToken token)
         {
-            request.Image = new UIImage (asset.Thumbnail);
+            if (!request.TryFulfill (new UIImage (asset.Thumbnail)))
+                throw new Exception ("Invalid image in asset");
         }
 
         void SaveFullResolutionImageToFile (ALAsset asset, FileRequest request, CancellationToken token)
@@ -125,8 +126,10 @@ namespace Stampsy.ImageSource
 
         void SaveFullResolutionImageToMemory (ALAsset asset, MemoryRequest request, CancellationToken token)
         {
-            using (var representation = asset.DefaultRepresentation)
-                request.Image = new UIImage (representation.GetImage ());
+            using (var representation = asset.DefaultRepresentation) {
+                if (!request.TryFulfill (new UIImage (representation.GetImage ())))
+                    throw new Exception ("Invalid image in asset");
+            }
         }
 
         Task<ALAsset> GetAsset (AssetDescription description, CancellationToken token)

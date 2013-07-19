@@ -51,10 +51,8 @@ namespace Stampsy.ImageSource
 
                     using (var scaled = CreateThumbnail (source, maxPixelSize, token))
                     using (var cropped = ScaleAndCrop (scaled, description.Size, description.Mode, token)) {
-                        if (cropped == null || cropped.Handle == IntPtr.Zero)
-                            throw new Exception ("Bad image.");
-
-                        request.Image = new UIImage (cropped);
+                        if (!request.TryFulfill (new UIImage (cropped)))
+                            throw new Exception ("Invalid image in asset");
                     }
                 }
             }, token);

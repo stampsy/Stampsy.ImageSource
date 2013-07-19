@@ -3,21 +3,55 @@ using MonoTouch.UIKit;
 
 namespace Stampsy.ImageSource
 {
-    public class MemoryRequest : Request
+    public class MemoryRequest : Request, IDisposable
     {
-        public UIImage Image { get; set; }
+        public UIImage Image { get; private set; }
+        public FileDestination Cache { get; private set; }
+
+        private bool _disposed;
 
         public override bool IsFulfilled {
             get {
-                return Image != null
-                    && Image.Handle != IntPtr.Zero
-                    && Image.CGImage.Handle != IntPtr.Zero;
+                CheckDisposed ();
+                return Image != null;
             }
         }
 
-        public MemoryRequest (IDescription description)
+        static bool IsValidImage (UIImage image)
+        {
+            return image != null
+                && image.Handle != IntPtr.Zero
+                && image.CGImage.Handle != IntPtr.Zero;
+        }
+
+        public bool TryFulfill (UIImage image)
+        {
+            CheckDisposed ();
+
+            if (!IsValidImage (image))
+                return false;
+
+            Image = image;
+            return true;
+        }
+
+        public MemoryRequest (IDescription description, FileDestination cache)
             : base (description)
         {
+            Cache = cache;
+        }
+
+        void CheckDisposed ()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException ("MemoryRequest");
+        }
+
+        public void Dispose ()
+        {
+            Image.Dispose ();
+            Image = null;
+            _disposed = true;
         }
     }
 }

@@ -23,7 +23,12 @@ namespace Stampsy.ImageSource
             return _sources [url.Scheme];
         }
 
-        public static Task<TRequest> Fetch<TRequest> (Uri url, Destination<TRequest> destination, CancellationToken token = default (CancellationToken))
+        public static Task<MemoryRequest> Fetch (Uri url, CancellationToken token = default (CancellationToken))
+        {
+            return Fetch (MemoryDestination.Default, url, token);
+        }
+
+        public static Task<TRequest> Fetch<TRequest> (Destination<TRequest> destination, Uri url, CancellationToken token = default (CancellationToken))
             where TRequest : Request
         {
             return destination.Fetch (url, token);

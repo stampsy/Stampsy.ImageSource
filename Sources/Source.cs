@@ -12,43 +12,67 @@ namespace Stampsy.ImageSource
 
         public Task Fetch (Request request, CancellationToken token)
         {
-            if (request.IsFulfilled) {
-                var tcs = new TaskCompletionSource<bool> ();
-                tcs.SetResult (true);
-                return tcs.Task;
-            }
-
             if (request is FileRequest)
                 return FetchToFile ((FileRequest) request, token);
 
             if (request is MemoryRequest)
-                return FetchToMemory ((MemoryRequest) request, token);
+                return FetchToMemoryWithFileCache ((MemoryRequest) request, token);
 
             throw new NotSupportedException ();
         }
 
+        Task FetchToMemoryWithFileCache (MemoryRequest request, CancellationToken token)
+        {
+            FileRequest cacheRequest = request.Cache.CreateRequest (request.Url);
+            if (cacheRequest.IsFulfilled)
+                return Task.Factory.StartNew (() => {
+                    SaveToMemory (request, cacheRequest);
+                }, token);
+
+            return FetchToMemory (request, token).ContinueWith (t => {
+                SaveToFile (cacheRequest, request);
+            }, token, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
+        }
+
         protected virtual Task FetchToFile (FileRequest request, CancellationToken token)
         {
+            // By default, fall back to FetchToMemory, but save to file
             return MemoryDestination.Default.Fetch (request.Url, token).ContinueWith (t => {
-                var memoryRequest = t.Result;
-
-                using (var img = memoryRequest.Image)
-                using (var data = GetImageData (img, GetImageExtension (memoryRequest))) {
-                    NSError err;
-                    data.Save (NSUrl.FromFilename (request.Filename), false, out err);
-
-                    if (err != null)
-                        throw new Exception (err.ToString ());
-                }
-            }, token);
+                using (var memoryRequest = t.Result)
+                    SaveToFile (request, memoryRequest);
+            }, token, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
         }
 
         protected virtual Task FetchToMemory (MemoryRequest request, CancellationToken token)
         {
-            return FileDestination.InTemp ().Fetch (request.Url, token).ContinueWith (t => {
-                var fileRequest = t.Result;
-                request.Image = UIImage.FromFile (fileRequest.Filename);
-            }, token);
+            // By default, fall back to FetchToFile, but load in memory
+            return request.Cache.Fetch (request.Url, token).ContinueWith (t => {
+                SaveToMemory (request, t.Result);
+            }, token, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
+        }
+
+        void SaveToFile (FileRequest target, MemoryRequest source)
+        {
+            if (!source.IsFulfilled)
+                throw new InvalidOperationException ();
+
+            var img = source.Image;
+            using (var data = GetImageData (img, GetImageExtension (source))) {
+                NSError err;
+                data.Save (NSUrl.FromFilename (target.Filename), false, out err);
+
+                if (err != null)
+                    throw new Exception (err.ToString ());
+            }
+        }
+
+        void SaveToMemory (MemoryRequest target, FileRequest source)
+        {
+            if (!source.IsFulfilled)
+                throw new InvalidOperationException ();
+
+            if (!target.TryFulfill (UIImage.FromFile (source.Filename)))
+                throw new Exception ("Invalid image");
         }
 
         protected virtual string GetImageExtension (MemoryRequest request)
