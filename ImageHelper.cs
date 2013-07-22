@@ -9,7 +9,7 @@ using CGImageProperties = MonoTouch.ImageIO.CGImageProperties;
 
 namespace Stampsy.ImageSource
 {
-    internal static class ImageHelper
+    public static class ImageHelper
     {
         // There seems to be an issue with concurrent usage of CGImageSource
         private static readonly object _gate = new object ();
