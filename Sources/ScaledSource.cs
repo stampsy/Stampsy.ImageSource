@@ -74,12 +74,8 @@ namespace Stampsy.ImageSource
             if (!source.HasValue)
                 return Math.Max (target.Width, target.Height);
 
-            var widthScale = (float) target.Width / source.Value.Width;
-            var heightScale = (float) target.Height / source.Value.Height;
-
-            return (widthScale < heightScale)
-                ? target.Width
-                : target.Height;
+            float scale = Math.Max ((float) target.Width / source.Value.Width, (float) target.Height / source.Value.Height);
+            return (int) Math.Max (scale * source.Value.Width, scale * source.Value.Height);
         }
 
         static CGImage CreateThumbnail (CGImageSource source, int maxPixelSize, CancellationToken token)
