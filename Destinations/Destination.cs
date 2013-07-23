@@ -36,7 +36,7 @@ namespace Stampsy.ImageSource
                         throw new OperationCanceledException ("Download was canceled.");
 
                     if (t.IsFaulted)
-                        throw new Exception (string.Format ("Could not download {0}", url), t.Exception.Flatten ().InnerException);
+                        throw t.Exception;
 
                     if (!request.IsFulfilled)
                         throw new Exception (string.Format ("Could not download {0}", url));
